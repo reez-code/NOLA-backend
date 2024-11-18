@@ -24,3 +24,22 @@ class SignupResource(Resource):
     parser.add_argument("skills", help="skills is required for developers")
     parser.add_argument("education_level", help="education_level is required for developers")
     parser.add_argument("available_time", help="available_time is required for developers")
+    
+    def post(self):
+        data = self.parser.parse_args()
+
+        # hash the password
+        data["password"] = generate_password_hash(data["password"]).decode("utf-8")
+
+        # validate the role
+        role = data["role"].lower()
+        if role not in ["developer", "client", "admin"]:
+             return {'message': 'Invalid role. Must be either developer or client', 'status': 'fail'}, 422
+        
+        # Check if the email already exists
+        email = User.query.filter_by(email=data['email']).first()
+        if email:
+            return {'message': 'Email already exists', 'status': 'fail'}, 422
+        
+        # Create a new user instance
+        
