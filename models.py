@@ -28,7 +28,8 @@ class DeveloperProfile(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    full_name = db.Column(db.String(150), nullable=True)
+    first_name = db.Column(db.String(150), nullable=True)
+    last_name = db.Column(db.String(150), nullable=True)
     description = db.Column(db.Text, nullable=True)
     profile_picture = db.Column(db.String(200), nullable=True)
     skills = db.Column(db.String(200), nullable=True)
