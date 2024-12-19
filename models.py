@@ -2,11 +2,13 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import MetaData
+from sqlalchemy_serializer import SerializerMixin
 
-metadata = MetaData
+
+metadata = MetaData()
 db = SQLAlchemy(metadata=metadata)
 
-class User(db.Model):
+class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -25,7 +27,7 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
 
-class DeveloperProfile(db.Model):
+class DeveloperProfile(db.Model, SerializerMixin):
     __tablename__ = 'developer_profiles'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -43,7 +45,7 @@ class DeveloperProfile(db.Model):
     job_applications = db.relationship("Job", back_populates="assigned_developer", foreign_keys='Job.developer_id')
 
 
-class ClientProfile(db.Model):
+class ClientProfile(db.Model, SerializerMixin):
     __tablename__ = 'client_profiles'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -57,7 +59,7 @@ class ClientProfile(db.Model):
     comments = db.relationship("Comment", back_populates="client")
 
 
-class Job(db.Model):
+class Job(db.Model, SerializerMixin):
     __tablename__ = 'jobs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -73,7 +75,7 @@ class Job(db.Model):
     assigned_developer = db.relationship("DeveloperProfile", back_populates="job_applications", foreign_keys=[developer_id])
 
 
-class Comment(db.Model):
+class Comment(db.Model, SerializerMixin):
     __tablename__ = 'comments'
 
     id = db.Column(db.Integer, primary_key=True)
