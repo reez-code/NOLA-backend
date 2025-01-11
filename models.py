@@ -4,12 +4,21 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import MetaData
 from sqlalchemy_serializer import SerializerMixin
 
+convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+}
 
-metadata = MetaData()
+metadata = MetaData(naming_convention=convention)
 db = SQLAlchemy(metadata=metadata)
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
+
+    serialize_rules = ("-developer_profile.user", "-client_profile.user",)
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -30,6 +39,8 @@ class User(db.Model, SerializerMixin):
 class DeveloperProfile(db.Model, SerializerMixin):
     __tablename__ = 'developer_profiles'
 
+    serialize_rules = ("-user.developer_profile", "-comments.developer", "-job_applications.assigned_developer",)
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     first_name = db.Column(db.String(150), nullable=True)
@@ -49,6 +60,8 @@ class DeveloperProfile(db.Model, SerializerMixin):
 class ClientProfile(db.Model, SerializerMixin):
     __tablename__ = 'client_profiles'
 
+    serialize_rules = ("-user.client_profile", "-jobs.client", "-comments.clent",)
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     business_name = db.Column(db.String(150), nullable=True)
@@ -62,6 +75,8 @@ class ClientProfile(db.Model, SerializerMixin):
 
 class Job(db.Model, SerializerMixin):
     __tablename__ = 'jobs'
+
+    serialize_rules = ("-client.jobs", "-assigned_developer.job_applications",)
 
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client_profiles.id'), nullable=False)
@@ -78,6 +93,8 @@ class Job(db.Model, SerializerMixin):
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = 'comments'
+
+    serialize_rules = ("-developer.comments", "-client.comments")
 
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
