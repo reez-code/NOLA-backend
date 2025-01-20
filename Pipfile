@@ -12,6 +12,7 @@ flask-bcrypt = "*"
 flask-restful = "*"
 sqlalchemy = "*"
 sqlalchemy-serializer = "*"
+email-validator = "*"
 
 [dev-packages]
 
