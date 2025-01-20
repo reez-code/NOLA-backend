@@ -6,7 +6,7 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.orm import validates
 from flask_bcrypt import check_password_hash
 from datetime import datetime
-
+from email_validator import validate_email, EmailNotValidError
 from config import db, bcrypt
 
 
@@ -40,10 +40,13 @@ class User(db.Model, SerializerMixin):
     
     @validates("email")
     def validate_email(self, key, email):
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            raise ValueError("Invalid email format")
+        try:
+            valid = validate_email(email)
+            email = valid.email
+        except EmailNotValidError as e:
+            raise ValueError(f"Invalid email: {e}")
         return email
-    
+      
     @validates("role")
     def validate_role(self, key, role):
         if role not in ["developer", "client", "admin"]:
