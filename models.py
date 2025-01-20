@@ -1,19 +1,15 @@
+import re
+
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import MetaData
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy_serializer import SerializerMixin
+from sqlalchemy.orm import validates
+from flask_bcrypt import check_password_hash
+from datetime import datetime
 
-convention = {
-    "ix": "ix_%(column_0_label)s",
-    "uq": "uq_%(table_name)s_%(column_0_name)s",
-    "ck": "ck_%(table_name)s_%(constraint_name)s",
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s"
-}
+from config import db, bcrypt
 
-metadata = MetaData(naming_convention=convention)
-db = SQLAlchemy(metadata=metadata)
+
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
@@ -29,11 +25,36 @@ class User(db.Model, SerializerMixin):
     developer_profile = db.relationship("DeveloperProfile", uselist=False, back_populates="user")
     client_profile = db.relationship("ClientProfile", uselist=False, back_populates="user")
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
 
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+    @hybrid_property
+    def password_hash(self):
+        raise AttributeError("Cannot be accessed!")
+    
+    @password_hash.setter
+    def password_hash(self, password):
+        password_hash = bcrypt.generate_password_hash(password.encode("utf-8"))
+        self._password_hash = password_hash.decode("utf-8")
+
+    def authenticate(self, password):
+        return bcrypt.check_password_hash(self._password_hash, password.encode("utf-8"))
+    
+    @validates("email")
+    def validate_email(self, key, email):
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            raise ValueError("Invalid email format")
+        return email
+    
+    @validates("role")
+    def validate_role(self, key, role):
+        if role not in ["developer", "client", "admin"]:
+            raise ValueError("Role must be either client or developer")
+        return role
+    
+    def __repr__(self):
+        return f"<User:{self.username}/>"
+
+ 
+
 
 
 class DeveloperProfile(db.Model, SerializerMixin):
