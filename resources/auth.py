@@ -6,7 +6,7 @@ from flask_jwt_extended import create_access_token, jwt_required
 from models import User, DeveloperProfile, ClientProfile
 from config import db
 
-class SignupResource(Resource):
+class Signup(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('email', required=True, help='Email is required')
     parser.add_argument('username', required=True, help='First name is required')
@@ -40,5 +40,17 @@ class SignupResource(Resource):
             db.session.rollback()
             response = {"errors": [str(e)]}
             return make_response(response, 422)
+        
+        user_dict = user.to_dict()
+        additional_claims = {"role": user_dict["role"]}
+        access_token = create_access_token(identity=user_dict["id"],
+                                           additional_claims=additional_claims)
+        
+        return {
+            "message": "Registered Successfully",
+            "status": "success",
+            "user": {**user_dict, "role":user.role},
+            "access_token": access_token
+        }
 
         
