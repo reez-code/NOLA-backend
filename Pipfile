@@ -14,6 +14,7 @@ sqlalchemy = "*"
 sqlalchemy-serializer = "*"
 email-validator = "*"
 flask-cors = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
