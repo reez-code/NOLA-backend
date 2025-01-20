@@ -31,9 +31,9 @@ class Signup(Resource):
             user = User(
                 email=data["email"],
                 username=data["username"],
-                password_hash=data["password"],
-                role=data["role"]
+                role=role
             )
+            user.password_hash = data["password"]
             db.session.add(user)
             db.session.commit()
         except Exception as e:

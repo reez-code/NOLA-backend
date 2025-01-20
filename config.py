@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
@@ -10,6 +11,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 app.json.compact = False
 
 convention = {
