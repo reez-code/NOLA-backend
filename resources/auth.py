@@ -54,4 +54,31 @@ class Signup(Resource):
             "access_token": access_token
         }
 
-        
+class Login(Resource):
+    parser = reqparse.RequestParser()
+
+    parser.add_argument("email", required=True, help="Email is required")
+    parser.add_argument("password", required=True, help="Password is required")
+
+    def post(self):
+        data = self.parser.parse_args()
+
+        user = User.query.filter_by(email=data["email"]).first()
+
+        if user:
+            if user.authenticate(data["password"]):
+                user_dict = user.to_dict()
+                additional_claims = {"role": user_dict["role"]}
+                access_token = create_access_token(identity=user_dict["id"],
+                                           additional_claims=additional_claims)
+                return {
+                    "message": "Registered Successfully",
+                    "status": "success",
+                    "user": {**user_dict, "role":user.role},
+                    "access_token": access_token
+                }
+            else:
+                return make_response({"error": "Invalid username/password", "status":"fail"}, 401)
+        else:
+            return make_response({"error": "Invalid username/password", "status":"fail"}, 401)
+                
