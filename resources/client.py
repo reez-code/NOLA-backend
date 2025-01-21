@@ -1,0 +1,47 @@
+from flask import make_response
+from flask_restful import Resource, reqparse
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+from flask_jwt_extended.exceptions import JWTExtendedException
+
+
+from models import ClientProfile
+from config import db
+
+
+class ClientDetails(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument("business_name", required=True, help="Business name is required")
+    parser.add_argument("business_description", required=True, help="Business Description is required")
+    parser.add_argument("logo", required=True, help="Logo is required")
+
+    @jwt_required()
+    def post(self):
+        data = self.parser.parse_args()
+        jwt = get_jwt()
+
+        if jwt["role"] in ["client"]:
+            try:
+                user_id = get_jwt_identity()
+                print(f"JWT Identity: {user_id}")  # Debugging output
+
+                if not isinstance(user_id, str):
+                   return {"msg": "Invalid identity format"}, 400
+                client_details = ClientProfile(
+                    business_name=data["business_name"],
+                    business_description=data["business_description"],
+                    logo=data["logo"],
+                    user_id=int(user_id)
+                )
+                db.session.add(client_details)
+                db.session.commit()
+            except JWTExtendedException as jwt_err:
+                return {"msg": str(jwt_err)}, 400
+            except Exception as e:
+                db.session.rollback()
+                response = {"errors": [str(e)]}
+                return make_response(response, 422)
+            
+            client_details_dict = client_details.to_dict()
+            return make_response(client_details_dict, 201)
+
+

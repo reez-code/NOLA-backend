@@ -1,9 +1,8 @@
-from flask import make_response, session, request
+from flask import make_response
 from flask_restful import Resource, reqparse
-from flask_bcrypt import generate_password_hash
 from flask_jwt_extended import create_access_token, jwt_required
 
-from models import User, DeveloperProfile, ClientProfile
+from models import User
 from config import db
 
 class Signup(Resource):
@@ -43,8 +42,8 @@ class Signup(Resource):
             return make_response(response, 422)
         
         user_dict = user.to_dict()
-        additional_claims = {"role": user_dict["role"]}
-        access_token = create_access_token(identity=user_dict["id"],
+        additional_claims = {"role": user_dict["role"].lower()}
+        access_token = create_access_token(identity=str(user.id),
                                            additional_claims=additional_claims)
         
         return {
@@ -52,7 +51,7 @@ class Signup(Resource):
             "status": "success",
             "user": {**user_dict, "role":user.role},
             "access_token": access_token
-        }
+        }, 201
 
 class Login(Resource):
     parser = reqparse.RequestParser()
@@ -68,15 +67,15 @@ class Login(Resource):
         if user:
             if user.authenticate(data["password"]):
                 user_dict = user.to_dict()
-                additional_claims = {"role": user_dict["role"]}
-                access_token = create_access_token(identity=user_dict["id"],
+                additional_claims = {"role": user_dict["role"].lower()}
+                access_token = create_access_token(identity=str(user.id),
                                            additional_claims=additional_claims)
                 return {
                     "message": "Logged in Successfully",
                     "status": "success",
                     "user": {**user_dict, "role":user.role},
                     "access_token": access_token
-                }
+                },201
             else:
                 return make_response({"error": "Invalid username/password", "status":"fail"}, 401)
         else:
