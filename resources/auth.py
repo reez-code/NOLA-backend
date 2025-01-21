@@ -81,4 +81,10 @@ class Login(Resource):
                 return make_response({"error": "Invalid username/password", "status":"fail"}, 401)
         else:
             return make_response({"error": "Invalid username/password", "status":"fail"}, 401)
+    
+class Logout(Resource):
+    @jwt_required()
+    def post(self):
+        #jwt handles log out by removing the token from client side
+        return {"message": "Logged out successfully"}, 200
                 
