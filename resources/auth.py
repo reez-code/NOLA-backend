@@ -72,7 +72,7 @@ class Login(Resource):
                 access_token = create_access_token(identity=user_dict["id"],
                                            additional_claims=additional_claims)
                 return {
-                    "message": "Registered Successfully",
+                    "message": "Logged in Successfully",
                     "status": "success",
                     "user": {**user_dict, "role":user.role},
                     "access_token": access_token
