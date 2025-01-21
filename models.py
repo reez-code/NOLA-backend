@@ -1,10 +1,6 @@
-import re
-
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.orm import validates
-from flask_bcrypt import check_password_hash
 from datetime import datetime
 from email_validator import validate_email, EmailNotValidError
 from config import db, bcrypt
