@@ -83,7 +83,7 @@ class ClientProfile(db.Model, SerializerMixin):
     serialize_rules = ("-user.client_profile", "-jobs.client", "-comments.clent",)
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     business_name = db.Column(db.String(150), nullable=True)
     business_description = db.Column(db.Text, nullable=True)
     logo = db.Column(db.String(200), nullable=True)
@@ -99,7 +99,7 @@ class Job(db.Model, SerializerMixin):
     serialize_rules = ("-client.jobs", "-assigned_developer.job_applications",)
 
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client_profiles.id', ondelete="CASCADE"), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey('client_profiles.id'), nullable=False)
     developer_id = db.Column(db.Integer, db.ForeignKey('developer_profiles.id'), nullable=True)  # Assigned developer
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
