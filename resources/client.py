@@ -4,7 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from flask_jwt_extended.exceptions import JWTExtendedException
 
 
-from models import ClientProfile, User, Job
+from models import ClientProfile, User
 from config import db
 
 
@@ -45,7 +45,7 @@ class ClientDetails(Resource):
     def get(self):
         jwt = get_jwt()
 
-        if jwt["role"] in ["client", "admin"]:
+        if jwt["role"] in ["client"]:
                 user_id = get_jwt_identity()
                 user = User.query.filter_by(id=user_id).first()
 
@@ -64,7 +64,7 @@ class ClientDetails(Resource):
             data = self.parser.parse_args()
             try:
                 user_id = get_jwt_identity()
-                client = ClientProfile.query.filter_by(id=user_id).first()
+                client = ClientProfile.query.filter_by(user_id=user_id).first()
                 for attr in data:
                     setattr(client, attr, data[attr])
                 db.session.add(client)
@@ -80,37 +80,8 @@ class ClientDetails(Resource):
             return {"error": "You are not authorized to access this"}, 422
             
 
-class JobResource(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument("title", required=True, help="Title is required")
-    parser.add_argument("description", required=True, help="Description is required")
-    parser.add_argument("status", required=True, help="Status is required")
 
-    @jwt_required()
-    def post(self):
-        data = self.parser.parse_args()
-        jwt = get_jwt()
-        status = data["status"].lower()
 
-        if jwt["role"] in ["client"]:
-            try:
-                user_id = get_jwt_identity()
-
-                job = Job(
-                    title=data["title"],
-                    description=data["description"],
-                    status=status,
-                    client_id=int(user_id)
-                )
-                db.session.add(job)
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                response = {"errors": [str(e)]}
-                return make_response(response, 422)
-        
-        job_dict = job.to_dict()
-        return make_response(job_dict, 201)
 
             
 

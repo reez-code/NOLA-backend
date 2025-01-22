@@ -1,7 +1,7 @@
 from config import app, api
 from resources.auth import Signup, Login, Logout
-from resources.client import ClientDetails, JobResource
-
+from resources.client import ClientDetails
+from resources.job import JobResource
 
 api.add_resource(Signup, "/signup", endpoint="signup")
 api.add_resource(Login, "/login", endpoint="login")

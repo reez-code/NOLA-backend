@@ -13,7 +13,6 @@ class Signup(Resource):
     parser.add_argument('role', required=True, help='Role is required (must be either developer or client)')
     
     def post(self):
-        User.query.delete()
         data = self.parser.parse_args()
 
         # validate the role
