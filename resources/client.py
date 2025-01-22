@@ -56,6 +56,29 @@ class ClientDetails(Resource):
                     return {"error": "Client not found"}, 404
         else:
             return {"error": "You are not authorized to access this"}, 422
+    
+    @jwt_required()
+    def patch(self):
+        jwt = get_jwt()
+        if jwt["role"] in ["client"]:
+            data = self.parser.parse_args()
+            try:
+                user_id = get_jwt_identity()
+                client = ClientProfile.query.filter_by(id=user_id).first()
+                for attr in data:
+                    setattr(client, attr, data[attr])
+                db.session.add(client)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                response = {"errors": [str(e)]}
+                return make_response(response, 422)
+            
+            response = {"message": "Client details updated successfully"}
+            return make_response(response, 200)
+        else:
+            return {"error": "You are not authorized to access this"}, 422
+            
 
 class JobResource(Resource):
     parser = reqparse.RequestParser()
