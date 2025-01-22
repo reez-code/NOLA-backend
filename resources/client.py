@@ -4,7 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from flask_jwt_extended.exceptions import JWTExtendedException
 
 
-from models import ClientProfile
+from models import ClientProfile, User
 from config import db
 
 
@@ -22,10 +22,7 @@ class ClientDetails(Resource):
         if jwt["role"] in ["client"]:
             try:
                 user_id = get_jwt_identity()
-                print(f"JWT Identity: {user_id}")  # Debugging output
 
-                if not isinstance(user_id, str):
-                   return {"msg": "Invalid identity format"}, 400
                 client_details = ClientProfile(
                     business_name=data["business_name"],
                     business_description=data["business_description"],
@@ -43,5 +40,25 @@ class ClientDetails(Resource):
             
             client_details_dict = client_details.to_dict()
             return make_response(client_details_dict, 201)
+    
+    @jwt_required()
+    def get(self):
+        jwt = get_jwt()
+
+        if jwt["role"] in ["client", "admin"]:
+                user_id = get_jwt_identity()
+                user = User.query.filter_by(id=user_id).first()
+
+                if user:
+                    response = user.to_dict()
+                    return make_response(response, 200)
+                else:
+                    return {"error": "Client not found"}, 404
+        else:
+            return {"error": "You are not authorized to access this"}, 422
+        
+
+                
+
 
 
