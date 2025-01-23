@@ -1,4 +1,4 @@
-from flask import make_response
+from flask import make_response, request
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 
@@ -68,10 +68,18 @@ class DeveloperDetails(Resource):
         jwt = get_jwt()
 
         if jwt["role"] in ["developer"]:
-            data = self.parser.parse_args()
+            data = request.get_json()
+            
+            if not data:
+                return make_response({"message": "No input data provided", "status": "fail"}, 400)
+            
             try:
                 user_id = get_jwt_identity()
                 developer = DeveloperProfile.query.filter_by(user_id=user_id).first()
+                
+                if not developer:
+                    return make_response({"message": "Developer not found", "status": "fail"}, 404)
+                
                 for attr in data:
                     setattr(developer, attr, data[attr])
                 db.session.add(developer)
