@@ -1,4 +1,4 @@
-from flask import make_response
+from flask import make_response, request
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from flask_jwt_extended.exceptions import JWTExtendedException
@@ -61,10 +61,18 @@ class ClientDetails(Resource):
     def patch(self):
         jwt = get_jwt()
         if jwt["role"] in ["client"]:
-            data = self.parser.parse_args()
+            data = request.get_json()
+
+            if not data:
+                return make_response({"message": "No input data provided", "status": "fail"}, 400)
+
             try:
                 user_id = get_jwt_identity()
                 client = ClientProfile.query.filter_by(user_id=user_id).first()
+                
+                if not client:
+                    return make_response({"message": "Client not found", "status": "fail"}, 404)
+                
                 for attr in data:
                     setattr(client, attr, data[attr])
                 db.session.add(client)
