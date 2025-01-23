@@ -89,7 +89,7 @@ class ClientProfile(db.Model, SerializerMixin):
     logo = db.Column(db.String(200), nullable=True)
 
     user = db.relationship("User", back_populates="client_profile")
-    jobs = db.relationship("Job", back_populates="client")
+    jobs = db.relationship("Job", back_populates="client", cascade="all, delete-orphan")
     comments = db.relationship("Comment", back_populates="client")
 
 
@@ -114,7 +114,7 @@ class Job(db.Model, SerializerMixin):
 class Comment(db.Model, SerializerMixin):
     __tablename__ = 'comments'
 
-    serialize_rules = ("-developer.comments", "-client.comments")
+    serialize_rules = ("-developer.comments", "-client.comments",)
 
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
