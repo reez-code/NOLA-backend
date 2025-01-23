@@ -46,22 +46,38 @@ class DeveloperDetails(Resource):
                         "developer_details": developer.to_dict()}
             return make_response(response, 201)
         else:
-            response = {"message": "You are not allowed access", "status": "fail"}
+            response = {"message": "Something went wrong", "status": "fail"}
             return make_response(response, 422)
         
     @jwt_required()
-    def get(self):
+    def get(self, id=None):
         jwt = get_jwt()
+        if jwt["role"] not in ["developer", "admin"]:
+            response = {"message": "Something went wrong", "status": "fail"}
+            return make_response(response, 422)
         if jwt["role"] in ["developer"]:
             user_id = get_jwt_identity()
+
+        user_id = id
+
+        if user_id:
             user = User.query.filter_by(id=user_id).first()
-            if user:
-                response = user.to_dict()
-                return make_response(response, 200)
-            else:
-                return {"error": "Developer not found", "status": "fail"}, 404
+            if not user:
+                response = {"message": "Something went wrong", "status": "fail"}
+                return make_response(response, 404)
+            response = user.to_dict()
+            return make_response(response, 200)
         else:
-            return {"error": "You are not authorized to access this"}, 422
+            if jwt["role"] not in ["admin"]:
+                response = {"message": "Something went wrong", "status": "fail"}
+                return make_response(response, 422)
+            developers = DeveloperProfile.query.all()
+            if not developers:
+                response = {"message": "Developers not found", "status": "fail"}
+                return make_response(response, 404)
+            response =  [developer.to_dict() for developer in developers]
+            return {response, 200}
+
     
     @jwt_required()
     def patch(self):
