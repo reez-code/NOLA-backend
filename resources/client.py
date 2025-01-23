@@ -40,22 +40,39 @@ class ClientDetails(Resource):
             
             client_details_dict = client_details.to_dict()
             return make_response(client_details_dict, 201)
-    
-    @jwt_required()
-    def get(self):
-        jwt = get_jwt()
-
-        if jwt["role"] in ["client"]:
-                user_id = get_jwt_identity()
-                user = User.query.filter_by(id=user_id).first()
-
-                if user:
-                    response = user.to_dict()
-                    return make_response(response, 200)
-                else:
-                    return {"error": "Client not found"}, 404
         else:
             return {"error": "You are not authorized to access this"}, 422
+    
+    @jwt_required()
+    def get(self, client_id=None):
+        jwt = get_jwt()
+
+        if jwt["role"] not in ["client", "admin"]:
+            return {"error": "You are not authorized to access this"}, 422
+
+        if jwt["role"] in ["client"]: 
+           user_id = get_jwt_identity()
+
+        user_id = client_id
+        
+        if user_id:
+            user = User.query.filter_by(id=user_id).first()
+            if not user:
+                return {"error": "Client not found"}, 404
+            response = user.to_dict()
+            return make_response(response, 200)
+        else:
+            if jwt["role"] not in ["admin"]:
+                return {"error": "You are not authorized to access this"}, 422
+                 
+            clients = ClientProfile.query.all()
+            if not clients:
+                 return {"error": "No clients found"}, 404
+            response = [client.to_dict() for client in clients]
+            return make_response(response, 200)
+        
+        
+        
     
     @jwt_required()
     def patch(self):
@@ -90,7 +107,7 @@ class ClientDetails(Resource):
     @jwt_required()
     def delete(self, client_id=None):
         jwt = get_jwt()
-        
+
         if jwt["role"] not in ["client", "admin"]:
             return {"error": "You are not authorized to access this"}, 422
         
