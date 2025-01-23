@@ -62,4 +62,36 @@ class DeveloperDetails(Resource):
                 return {"error": "Developer not found", "status": "fail"}, 404
         else:
             return {"error": "You are not authorized to access this"}, 422
+    
+    @jwt_required()
+    def patch(self):
+        jwt = get_jwt()
+
+        if jwt["role"] in ["developer"]:
+            data = self.parser.parse_args()
+            try:
+                user_id = get_jwt_identity()
+                developer = DeveloperProfile.query.filter_by(user_id=user_id).first()
+                for attr in data:
+                    setattr(developer, attr, data[attr])
+                db.session.add(developer)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                response =  {"errors": [str(e)]}
+                return make_response(response, 422)
+            
+            response = {
+                "message": "Updated Successfully",
+                "developer": developer.to_dict(),
+                "status": "success"
+            }
+            return make_response(response, 200)
+        else:
+            response = {
+                "message": "You are not allowed to access this resource",
+                "status": "fail"
+            }
+            return make_response(response, 422)
+
 
