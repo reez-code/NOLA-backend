@@ -48,3 +48,18 @@ class DeveloperDetails(Resource):
         else:
             response = {"message": "You are not allowed access", "status": "fail"}
             return make_response(response, 422)
+        
+    @jwt_required()
+    def get(self):
+        jwt = get_jwt()
+        if jwt["role"] in ["developer"]:
+            user_id = get_jwt_identity()
+            user = User.query.filter_by(id=user_id).first()
+            if user:
+                response = user.to_dict()
+                return make_response(response, 200)
+            else:
+                return {"error": "Developer not found", "status": "fail"}, 404
+        else:
+            return {"error": "You are not authorized to access this"}, 422
+
