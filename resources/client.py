@@ -52,8 +52,8 @@ class ClientDetails(Resource):
 
         if jwt["role"] in ["client"]: 
            user_id = get_jwt_identity()
-
-        user_id = client_id
+        else:
+            user_id = client_id
 
         if user_id:
             user = User.query.filter_by(id=user_id).first()
@@ -113,7 +113,8 @@ class ClientDetails(Resource):
         
         if jwt["role"] in ["client"]:
             user_id = get_jwt_identity()
-        user_id = client_id
+        else:
+            user_id = client_id
 
         if not user_id:
             return {"error": "Client ID is required"}, 400

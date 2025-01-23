@@ -52,13 +52,15 @@ class DeveloperDetails(Resource):
     @jwt_required()
     def get(self, id=None):
         jwt = get_jwt()
+
         if jwt["role"] not in ["developer", "admin"]:
             response = {"message": "Something went wrong", "status": "fail"}
             return make_response(response, 401)
+        
         if jwt["role"] in ["developer"]:
             user_id = get_jwt_identity()
-
-        user_id = id
+        else:
+            user_id = id
 
         if user_id:
             user = User.query.filter_by(id=user_id).first()
@@ -117,5 +119,34 @@ class DeveloperDetails(Resource):
                 "status": "fail"
             }
             return make_response(response, 401)
+        
+    @jwt_required()
+    def delete(self, id=None):
+        jwt = get_jwt()
+
+        if jwt["role"] not in ["admin", "developer"]:
+            return {"message": "Something went wrong"}, 401
+        
+        if jwt["role"] in ["developer"]:
+            user_id = get_jwt_identity()
+        else:
+            user_id = id
+
+        if not user_id:
+            return make_response({"message": "User ID is required", "status": "fail"}, 400)
+        
+        try:
+            developer = User.query.filter_by(id=user_id).first()
+            if not developer:
+                return make_response({"message": "Developer not found", "status": "fail"}, 404)
+            db.session.delete(developer)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            response =  {"errors": [str(e)]}
+            return make_response(response, 422)
+        
+        response = {"message": "developer successfully deleted", "status": "success"}
+        return make_response(response, 200)
 
 
