@@ -69,7 +69,7 @@ class ClientDetails(Resource):
             try:
                 user_id = get_jwt_identity()
                 client = ClientProfile.query.filter_by(user_id=user_id).first()
-                
+
                 if not client:
                     return make_response({"message": "Client not found", "status": "fail"}, 404)
                 
@@ -86,6 +86,37 @@ class ClientDetails(Resource):
             return make_response(response, 200)
         else:
             return {"error": "You are not authorized to access this"}, 422
+        
+    @jwt_required()
+    def delete(self, client_id=None):
+        jwt = get_jwt()
+        
+        if jwt["role"] not in ["client", "admin"]:
+            return {"error": "You are not authorized to access this"}, 422
+        
+        user_id = client_id if client_id else get_jwt_identity()
+
+        try:
+            client = User.query.filter_by(id=user_id).first()
+            if not client:
+                    return make_response({"message": "Client not found", "status": "fail"}, 404)
+            db.session.delete(client)
+            db.session.commit()
+        except Exception as e:
+                    db.session.rollback()
+                    response = {"errors": [str(e)]}
+                    return make_response(response, 422)
+        
+        response = {"message": "client successfully deleted", "status": "success"}
+        return make_response(response, 200)
+        
+
+
+
+
+
+
+
             
 
 
