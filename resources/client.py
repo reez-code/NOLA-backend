@@ -41,14 +41,14 @@ class ClientDetails(Resource):
             client_details_dict = client_details.to_dict()
             return make_response(client_details_dict, 201)
         else:
-            return {"error": "Something went wrong"}, 422
+            return {"error": "Something went wrong"}, 401
     
     @jwt_required()
     def get(self, client_id=None):
         jwt = get_jwt()
 
         if jwt["role"] not in ["client", "admin"]:
-            return {"error": "Something went wrong"}, 422
+            return {"error": "Something went wrong"}, 401
 
         if jwt["role"] in ["client"]: 
            user_id = get_jwt_identity()
@@ -63,7 +63,7 @@ class ClientDetails(Resource):
             return make_response(response, 200)
         else:
             if jwt["role"] not in ["admin"]:
-                return {"error": "Something went wrong"}, 422
+                return {"error": "Something went wrong"}, 401
                  
             clients = ClientProfile.query.all()
             if not clients:
@@ -102,14 +102,14 @@ class ClientDetails(Resource):
             response = {"message": "Client details updated successfully"}
             return make_response(response, 200)
         else:
-            return {"error": "Something went wrong"}, 422
+            return {"error": "Something went wrong"}, 401
         
     @jwt_required()
     def delete(self, client_id=None):
         jwt = get_jwt()
 
         if jwt["role"] not in ["client", "admin"]:
-            return {"error": "Something went wrong"}, 422
+            return {"error": "Something went wrong"}, 401
         
         if jwt["role"] in ["client"]:
             user_id = get_jwt_identity()

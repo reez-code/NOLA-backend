@@ -47,14 +47,14 @@ class DeveloperDetails(Resource):
             return make_response(response, 201)
         else:
             response = {"message": "Something went wrong", "status": "fail"}
-            return make_response(response, 422)
+            return make_response(response, 401)
         
     @jwt_required()
     def get(self, id=None):
         jwt = get_jwt()
         if jwt["role"] not in ["developer", "admin"]:
             response = {"message": "Something went wrong", "status": "fail"}
-            return make_response(response, 422)
+            return make_response(response, 401)
         if jwt["role"] in ["developer"]:
             user_id = get_jwt_identity()
 
@@ -70,7 +70,7 @@ class DeveloperDetails(Resource):
         else:
             if jwt["role"] not in ["admin"]:
                 response = {"message": "Something went wrong", "status": "fail"}
-                return make_response(response, 422)
+                return make_response(response, 401)
             developers = DeveloperProfile.query.all()
             if not developers:
                 response = {"message": "Developers not found", "status": "fail"}
@@ -113,9 +113,9 @@ class DeveloperDetails(Resource):
             return make_response(response, 200)
         else:
             response = {
-                "message": "You are not allowed to access this resource",
+                "message": "Something went wrong",
                 "status": "fail"
             }
-            return make_response(response, 422)
+            return make_response(response, 401)
 
 
