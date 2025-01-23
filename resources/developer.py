@@ -133,7 +133,7 @@ class DeveloperDetails(Resource):
             user_id = id
 
         if not user_id:
-            return make_response({"message": "User ID is required", "status": "fail"}, 400)
+            return make_response({"message": "Developer id is required", "status": "fail"}, 400)
         
         try:
             developer = User.query.filter_by(id=user_id).first()
