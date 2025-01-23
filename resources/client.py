@@ -54,7 +54,7 @@ class ClientDetails(Resource):
            user_id = get_jwt_identity()
 
         user_id = client_id
-        
+
         if user_id:
             user = User.query.filter_by(id=user_id).first()
             if not user:
@@ -111,8 +111,13 @@ class ClientDetails(Resource):
         if jwt["role"] not in ["client", "admin"]:
             return {"error": "You are not authorized to access this"}, 422
         
-        user_id = client_id if client_id else get_jwt_identity()
+        if jwt["role"] in ["client"]:
+            user_id = get_jwt_identity()
+        user_id = client_id
 
+        if not user_id:
+            return {"error": "Client ID is required"}, 400
+        
         try:
             client = User.query.filter_by(id=user_id).first()
             if not client:
