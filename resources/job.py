@@ -93,22 +93,18 @@ class JobResource(Resource):
         if not data:
             return make_response({"message": "No input data provided", "status": "fail"}, 400)
         
-        if jwt["role"] in ["client"]:
-            user_id = get_jwt_identity()
-        else:
-            user_id = id
-        
-        if not user_id:
+        if not id:
             return {"message": "Job id is required"}, 400
         
         if jwt["role"] in ["client"]:
+            user_id = get_jwt_identity()
             job = Job.query.filter(
                 and_(Job.client_id == user_id, 
                      Job.id == id)
             ).first()
         else:
-            job = Job.query.filter_by(id=user_id).first()
-
+            job = Job.query.filter_by(id=id).first()
+            
         if not job:
             return {"message": "Job not found"}, 404
         
@@ -124,6 +120,50 @@ class JobResource(Resource):
         
         response = {"message": "Job updated successfully", "Job":job.to_dict()}
         return make_response(response, 200)
+    
+    @jwt_required()
+    def delete(self, id=None):
+        jwt = get_jwt()
+
+        if jwt["role"] not in ["admin", "client"]:
+            return {"error": "Something went wrong"}, 401
+        
+        if not id:
+            return {"message": "Job id is required"}, 400
+        
+        if jwt["role"] in ["client"]:
+            user_id = get_jwt_identity()
+            job = Job.query.filter(
+                and_(Job.client_id == user_id, 
+                     Job.id == id)
+            ).first()
+        else:
+            job = Job.query.filter_by(id=id).first()
+
+        if not job:
+            return {"message": "Job not found"}, 404
+        
+        try:
+            db.session.delete(job)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            response = {"errors": [str(e)]}
+            return make_response(response, 422)
+        
+        response = {"message": "job successfully deleted", "status": "success"}
+        return make_response(response, 200)
+
+        
+
+        
+        
+        
+        
+
+
+
+
         
 
         
