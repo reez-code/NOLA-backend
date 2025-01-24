@@ -109,6 +109,12 @@ class JobResource(Resource):
         if not id:
             return {"message": "Job id is required"}, 400
         
+        if data["developer_id"]:
+            developer_id = data["developer_id"]
+            developer_profile = DeveloperProfile.query.filter_by(id=developer_id).first()
+            if not developer_profile:
+                return {"message": "Developer profile not found"}, 404
+        
         if jwt["role"] in ["client"]:
             user_id = get_jwt_identity()
             client_profile = ClientProfile.query.filter_by(user_id=user_id).first()
