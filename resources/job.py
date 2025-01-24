@@ -5,7 +5,7 @@ from sqlalchemy import and_
 
 
 
-from models import Job
+from models import Job, ClientProfile, DeveloperProfile
 from config import db
 
 class JobResource(Resource):
@@ -23,12 +23,17 @@ class JobResource(Resource):
         if jwt["role"] in ["client"]:
             try:
                 user_id = get_jwt_identity()
+                client_profile = ClientProfile.query.filter_by(user_id=user_id).first()
+                if not client_profile:
+                    return {"message": "Client profile not found"}, 404
+                
+                client_id = client_profile.id
 
                 job = Job(
                     title=data["title"],
                     description=data["description"],
                     status=status,
-                    client_id=int(user_id)
+                    client_id=client_id
                 )
                 db.session.add(job)
                 db.session.commit()
@@ -52,9 +57,17 @@ class JobResource(Resource):
         if user_id:
         
             if jwt["role"] in ["client"]:
-                jobs = Job.query.filter_by(client_id=user_id).all()
+                client_profile = ClientProfile.query.filter_by(user_id=user_id).first()
+                if not client_profile:
+                    return {"message": "Client profile not found"}, 404
+                client_id  = client_profile.id
+                jobs = Job.query.filter_by(client_id=client_id).all()
             elif jwt["role"] in ["developer"]:
-                jobs = Job.query.filter_by(developer_id=user_id).all()
+                developer_profile = DeveloperProfile.query.filter_by(user_id=user_id).first()
+                if not developer_profile:
+                    return {"message": "Developer profile not found"}, 404
+                developer_id = developer_profile.id
+                jobs = Job.query.filter_by(developer_id=developer_id).all()
             
             if jobs:
                     job = [job.to_dict() for job in jobs]
@@ -98,8 +111,12 @@ class JobResource(Resource):
         
         if jwt["role"] in ["client"]:
             user_id = get_jwt_identity()
+            client_profile = ClientProfile.query.filter_by(user_id=user_id).first()
+            if not client_profile:
+                return {"message": "Client profile not found"}, 404
+            client_id = client_profile.id
             job = Job.query.filter(
-                and_(Job.client_id == user_id, 
+                and_(Job.client_id == client_id, 
                      Job.id == id)
             ).first()
         else:
@@ -133,8 +150,12 @@ class JobResource(Resource):
         
         if jwt["role"] in ["client"]:
             user_id = get_jwt_identity()
+            client_profile = ClientProfile.query.filter_by(user_id=user_id).first()
+            if not client_profile:
+                return {"message": "Client profile not found"}, 404
+            client_id = client_profile.id
             job = Job.query.filter(
-                and_(Job.client_id == user_id, 
+                and_(Job.client_id == client_id, 
                      Job.id == id)
             ).first()
         else:
