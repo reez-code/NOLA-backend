@@ -22,6 +22,7 @@ class User(db.Model, SerializerMixin):
     client_profile = db.relationship("ClientProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
 
     comments = db.relationship("Comment", back_populates="user", cascade="all, delete-orphan")
+    replies = db.relationship("Reply", back_populates="user", cascade="all, delete-orphan")
 
 
     @hybrid_property
@@ -110,7 +111,7 @@ class Job(db.Model, SerializerMixin):
 
     client = db.relationship("ClientProfile", back_populates="jobs")
     assigned_developer = db.relationship("DeveloperProfile", back_populates="job_applications")
-    comments = db.relationship("Comment", back_populates="job")
+    comments = db.relationship("Comment", back_populates="job", cascade="all, delete-orphan")
 
 
 class Comment(db.Model, SerializerMixin):
@@ -121,19 +122,26 @@ class Comment(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
 
     user = db.relationship("User", back_populates="comments")
     job = db.relationship("Job", back_populates="comments")
-    replies = db.relationship("Comment", )
-    # Parent to Replies
-    replies = db.relationship("Comment", foreign_keys=[parent_id], back_populates="parent")
-
-    # Reply to Parent
-    parent = db.relationship("Comment", remote_side=[id], back_populates="replies")
+    replies = db.relationship("Reply", back_populates="comments", cascade="all, delete-orphan")
     
+    
+class Reply(db.Model, SerializerMixin):
+    __tablename__ = 'replies'
 
+    serialize_rules = ("-user.replies", "-comment.replies",)
+
+    id = db.Column(db.Integer, primary_key=True)
+    comment_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", back_populates="replies")
+    comment = db.relationship("Comment", back_populates="replies")
  
