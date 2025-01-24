@@ -10,7 +10,7 @@ from config import db, bcrypt
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
-    serialize_rules = ("-developer_profile.user", "-client_profile.user", "-_password_hash",)
+    serialize_rules = ("-developer_profile.user", "-client_profile.user", "-_password_hash", "-comments.user",)
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -20,6 +20,8 @@ class User(db.Model, SerializerMixin):
     
     developer_profile = db.relationship("DeveloperProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
     client_profile = db.relationship("ClientProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
+
+    comments = db.relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
 
     @hybrid_property
@@ -73,7 +75,6 @@ class DeveloperProfile(db.Model, SerializerMixin):
     education_level = db.Column(db.String(100), nullable=True)
 
     user = db.relationship("User", back_populates="developer_profile")
-    comments = db.relationship("Comment", back_populates="developer")
     job_applications = db.relationship("Job", back_populates="assigned_developer")
 
 
@@ -90,13 +91,13 @@ class ClientProfile(db.Model, SerializerMixin):
 
     user = db.relationship("User", back_populates="client_profile")
     jobs = db.relationship("Job", back_populates="client", cascade="all, delete-orphan")
-    comments = db.relationship("Comment", back_populates="client")
+    
 
 
 class Job(db.Model, SerializerMixin):
     __tablename__ = 'jobs'
 
-    serialize_rules = ("-client.jobs", "-assigned_developer.job_applications",)
+    serialize_rules = ("-client.jobs", "-assigned_developer.job_applications", "-comments.job",)
 
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client_profiles.id'), nullable=False)
@@ -109,19 +110,23 @@ class Job(db.Model, SerializerMixin):
 
     client = db.relationship("ClientProfile", back_populates="jobs")
     assigned_developer = db.relationship("DeveloperProfile", back_populates="job_applications")
+    comments = db.relationship("Comment", back_populates="job")
 
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = 'comments'
 
-    serialize_rules = ("-developer.comments", "-client.comments",)
+    serialize_rules = ("-user.comments","-job.comments",)
 
     id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    developer_id = db.Column(db.Integer, db.ForeignKey('developer_profiles.id'), nullable=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client_profiles.id'), nullable=True)
-    admin_viewed = db.Column(db.Boolean, default=False)  # Whether the admin has viewed the comment
+    
 
-    developer = db.relationship("DeveloperProfile", back_populates="comments")
-    client = db.relationship("ClientProfile", back_populates="comments")
+    user = db.relationship("User", back_populates="comments")
+    job = db.relationship("Job", back_populates="comments")
+    
+
+ 
