@@ -116,17 +116,24 @@ class Job(db.Model, SerializerMixin):
 class Comment(db.Model, SerializerMixin):
     __tablename__ = 'comments'
 
-    serialize_rules = ("-user.comments","-job.comments",)
+    serialize_rules = ("-user.comments","-job.comments", "-parent.replies", "-replies.parent",)
 
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
 
     user = db.relationship("User", back_populates="comments")
     job = db.relationship("Job", back_populates="comments")
+    replies = db.relationship("Comment", )
+    # Parent to Replies
+    replies = db.relationship("Comment", foreign_keys=[parent_id], back_populates="parent")
+
+    # Reply to Parent
+    parent = db.relationship("Comment", remote_side=[id], back_populates="replies")
     
 
  
