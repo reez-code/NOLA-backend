@@ -1,6 +1,7 @@
-from flask import make_response
+from flask import make_response, request
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+from sqlalchemy import and_
 
 
 
@@ -81,6 +82,60 @@ class JobResource(Resource):
             response = [job.to_dict() for job in jobs]
             return make_response(response, 200)
             
+    @jwt_required()
+    def patch(self, id=None):
+        jwt = get_jwt()
+        if jwt["role"] not in ["client", "admin"]:
+            return {"message": "Something went wrong"}, 401
+        
+        data = request.get_json()
+
+        if not data:
+            return make_response({"message": "No input data provided", "status": "fail"}, 400)
+        
+        if jwt["role"] in ["client"]:
+            user_id = get_jwt_identity()
+        else:
+            user_id = id
+        
+        if not user_id:
+            return {"message": "Job id is required"}, 400
+        
+        if jwt["role"] in ["client"]:
+            job = Job.query.filter(
+                and_(Job.client_id == user_id, 
+                     Job.id == id)
+            ).first()
+        else:
+            job = Job.query.filter_by(id=user_id).first()
+
+        if not job:
+            return {"message": "Job not found"}, 404
+        
+        try:
+            for attr in data:
+                setattr(job, attr, data[attr])
+            db.session.add(job)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            response = {"errors": [str(e)]}
+            return make_response(response, 422)
+        
+        response = {"message": "Job updated successfully", "Job":job.to_dict()}
+        return make_response(response, 200)
+        
+
+        
+
+        
+
+        
+        
+
+
+             
+             
             
                 
       
