@@ -74,7 +74,7 @@ class DeveloperProfile(db.Model, SerializerMixin):
 
     user = db.relationship("User", back_populates="developer_profile")
     comments = db.relationship("Comment", back_populates="developer")
-    job_applications = db.relationship("Job", back_populates="assigned_developer", foreign_keys='Job.developer_id')
+    job_applications = db.relationship("Job", back_populates="assigned_developer")
 
 
 class ClientProfile(db.Model, SerializerMixin):
@@ -108,7 +108,7 @@ class Job(db.Model, SerializerMixin):
     status = db.Column(db.String(20), default='open')  # 'open', 'in-progress', 'completed'
 
     client = db.relationship("ClientProfile", back_populates="jobs")
-    assigned_developer = db.relationship("DeveloperProfile", back_populates="job_applications", foreign_keys=[developer_id])
+    assigned_developer = db.relationship("DeveloperProfile", back_populates="job_applications")
 
 
 class Comment(db.Model, SerializerMixin):
