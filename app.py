@@ -8,7 +8,7 @@ api.add_resource(Signup, "/signup", endpoint="signup")
 api.add_resource(Login, "/login", endpoint="login")
 api.add_resource(Logout, "/logout", endpoint="logout")
 api.add_resource(ClientDetails, "/client_details", "/client_details/<int:client_id>", endpoint="clientdetails")
-api.add_resource(JobResource, "/job", endpoint="job")
+api.add_resource(JobResource, "/jobs", "/jobs/<int:id>", endpoint="jobs")
 api.add_resource(DeveloperDetails, "/developer_details", "/developer_details/<int:id>", endpoint="developerdetails")
 
 if __name__ == '__main__':
