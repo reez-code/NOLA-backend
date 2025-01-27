@@ -1,11 +1,7 @@
 from config import app, db
-from models import User, ClientProfile
+from models import User, ClientProfile, Comment
 
 with app.app_context():
     print("Deleting Records")
-    user = User.query.all()
-    # User.query.delete()
-    # ClientProfile.query.delete()
-    for user in user:
-     db.session.delete(user)
-    db.session.commit()
+    comments = Comment.query.filter_by(id=1).first()
+    print(comments.to_dict())

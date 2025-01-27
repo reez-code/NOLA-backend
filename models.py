@@ -13,16 +13,18 @@ class User(db.Model, SerializerMixin):
     serialize_rules = ("-developer_profile.user", "-client_profile.user", "-_password_hash", "-comments.user",)
 
     id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(150), nullable=False)
+    last_name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    username = db.Column(db.String(80), unique=True, nullable=False)
     _password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(10), nullable=False)  # 'developer', 'client', or 'admin'
+    role = db.Column(db.String(10), nullable=False)  # 'developer', 'client', or 'admin'db
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
     
     developer_profile = db.relationship("DeveloperProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
     client_profile = db.relationship("ClientProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
 
     comments = db.relationship("Comment", back_populates="user", cascade="all, delete-orphan")
-    replies = db.relationship("Reply", back_populates="user", cascade="all, delete-orphan")
 
 
     @hybrid_property
@@ -66,14 +68,14 @@ class DeveloperProfile(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    first_name = db.Column(db.String(150), nullable=True)
-    last_name = db.Column(db.String(150), nullable=True)
-    description = db.Column(db.Text, nullable=True)
+    description = db.Column(db.Text, nullable=False)
     profile_picture = db.Column(db.String(200), nullable=True)
-    skills = db.Column(db.String(200), nullable=True)
+    skills = db.Column(db.String(200), nullable=False)
     available_time = db.Column(db.String(50), nullable=True)
     github_account = db.Column(db.String(100), nullable=True)
     education_level = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
     user = db.relationship("User", back_populates="developer_profile")
     job_applications = db.relationship("Job", back_populates="assigned_developer")
@@ -86,9 +88,10 @@ class ClientProfile(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    business_name = db.Column(db.String(150), nullable=True)
-    business_description = db.Column(db.Text, nullable=True)
-    logo = db.Column(db.String(200), nullable=True)
+    business_name = db.Column(db.String(150), nullable=False)
+    business_description = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
     user = db.relationship("User", back_populates="client_profile")
     jobs = db.relationship("Job", back_populates="client", cascade="all, delete-orphan")
@@ -111,37 +114,37 @@ class Job(db.Model, SerializerMixin):
 
     client = db.relationship("ClientProfile", back_populates="jobs")
     assigned_developer = db.relationship("DeveloperProfile", back_populates="job_applications")
-    comments = db.relationship("Comment", back_populates="job", cascade="all, delete-orphan")
+    comments = db.relationship("Comment", back_populates="job")
 
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = 'comments'
 
-    serialize_rules = ("-user.comments","-job.comments", "-parent.replies", "-replies.parent",)
+    serialize_rules = ("-user.comments","-job.comments", "-parent", "-replies.parent",)
 
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+
+    def add_reply(self, content):
+        return Comment(content=content, parent=self)
+    
+    @property
+    def serialized_replies(self):
+        """Serialize replies explicitly to include nested comments."""
+        return [reply.to_dict() for reply in self.replies]
     
 
     user = db.relationship("User", back_populates="comments")
     job = db.relationship("Job", back_populates="comments")
-    replies = db.relationship("Reply", back_populates="comments", cascade="all, delete-orphan")
+    replies = db.relationship("Comment", backref=db.backref("parent", remote_side=[id]),
+                              lazy="dynamic")
     
-    
-class Reply(db.Model, SerializerMixin):
-    __tablename__ = 'replies'
 
-    serialize_rules = ("-user.replies", "-comment.replies",)
+  
 
-    id = db.Column(db.Integer, primary_key=True)
-    comment_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship("User", back_populates="replies")
-    comment = db.relationship("Comment", back_populates="replies")
  
