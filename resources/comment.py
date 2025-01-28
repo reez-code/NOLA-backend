@@ -95,14 +95,10 @@ class CommentResource(Resource):
     @jwt_required()
     def delete(self, id):
         if not id:
-            return {"message": "job_id is required"}, 400 
+            return {"message": "comment_id is required"}, 400 
         
-        user_id = get_jwt_identity()
-
         try:
-            comment = Comment.query.filter(
-                    and_(Comment.job_id == id, Comment.user_id == user_id)
-                ).first()
+            comment = Comment.query.filter_by(id=id).first()
             if not comment:
                 return make_response({"message": "Comment not found", "status": "fail"}, 404)
             db.session.delete(comment)

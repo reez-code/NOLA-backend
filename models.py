@@ -131,33 +131,23 @@ class Comment(db.Model, SerializerMixin):
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
     
 
-    def add_reply(self, content):
-        return Comment(content=content, parent=self)
-    
-    @property
-    def serialized_replies(self):
-        """Serialize replies explicitly to include nested comments."""
-        return [reply.to_dict() for reply in self.replies]
-    
+    def add_reply(self, content, user_id):
+        return Comment(content=content, parent_id=self.id, job_id=self.job_id, user_id=user_id)    
 
     user = db.relationship("User", back_populates="comments")
     job = db.relationship("Job", back_populates="comments")
-    replies = db.relationship("Comment", backref=db.backref("parent", remote_side=[id]),
+    replies = db.relationship("Comment", backref=db.backref("parent", remote_side=[id]), cascade="all, delete-orphan",
                               lazy="dynamic")
     
-    def to_dict(self, depth=1):
-        print(f"Serializing comment {self.id}, depth: {depth}")
-        if depth == 0:
-            return {"id": self.id, "content": self.content}
-        
+    def to_dict(self):
         return {
             "id": self.id,
             "content": self.content,
             "user": {"id": self.user.id, "firstname": self.user.first_name, "role":self.user.role} if self.user else None,
             "job_id": self.job_id,
             "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-            "replies": [reply.to_dict(depth=depth - 1) for reply in self.replies]
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "replies": [reply.to_dict() for reply in self.replies]
         }
 
   
