@@ -8,7 +8,8 @@ from config import db
 class Signup(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('email', required=True, help='Email is required')
-    parser.add_argument('username', required=True, help='First name is required')
+    parser.add_argument('firstname', required=True, help='First name is required')
+    parser.add_argument("lastname", required=True, help="Last name is required")
     parser.add_argument('password', required=True, help='Password is required')
     parser.add_argument('role', required=True, help='Role is required (must be either developer or client)')
     
@@ -29,7 +30,8 @@ class Signup(Resource):
         try:
             user = User(
                 email=data["email"],
-                username=data["username"],
+                first_name=data["firstname"],
+                last_name=data["lastname"],
                 role=role
             )
             user.password_hash = data["password"]
@@ -54,7 +56,6 @@ class Signup(Resource):
 
 class Login(Resource):
     parser = reqparse.RequestParser()
-
     parser.add_argument("email", required=True, help="Email is required")
     parser.add_argument("password", required=True, help="Password is required")
 

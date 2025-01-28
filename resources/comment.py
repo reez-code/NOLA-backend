@@ -1,4 +1,4 @@
-from flask import make_response
+from flask import make_response, request
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import and_
@@ -55,10 +55,66 @@ class CommentResource(Resource):
 
         for comment in comments:
             comment_data = comment.to_dict()
-            comment_data["replies"] = [reply.to_dict() for reply in comment.replies]
             response.append(comment_data)
         
         return make_response(response, 200)
+    
+
+    @jwt_required()
+    def patch(self, id):
+        if not id:
+            return {"message": "job_id is required"}, 400
+
+        data = request.get_json()
+
+        if not data:
+            return {"message": "No data provided"}, 400
+        
+        try: 
+            user_id = get_jwt_identity()
+            comment = Comment.query.filter(
+                    and_(Comment.job_id == id, Comment.user_id == user_id)
+                ).first()
+            if not comment:
+                return {"message": "Comment not found"}, 404
+            for attr in data:
+                setattr(comment, attr, data[attr])
+            db.session.add(comment)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return {"message": str(e)}, 500
+        
+        response = {
+                "message": "Updated Successfully",
+                "developer": comment.to_dict(),
+                "status": "success"
+            }
+        return make_response(response, 200)
+    
+    @jwt_required()
+    def delete(self, id):
+        if not id:
+            return {"message": "job_id is required"}, 400 
+        
+        user_id = get_jwt_identity()
+
+        try:
+            comment = Comment.query.filter(
+                    and_(Comment.job_id == id, Comment.user_id == user_id)
+                ).first()
+            if not comment:
+                return make_response({"message": "Comment not found", "status": "fail"}, 404)
+            db.session.delete(comment)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return {"message": str(e)}, 422
+
+        response = {"message": "comment successfully deleted", "status": "success"}
+        return make_response(response, 200)
+
+        
 
         
 

@@ -10,7 +10,7 @@ from config import db, bcrypt
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
-    serialize_rules = ("-developer_profile.user", "-client_profile.user", "-_password_hash", "-comments.user",)
+    serialize_rules = ("-developer_profile.user", "-client_profile.user", "-_password_hash", "-comments",)
 
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(150), nullable=False)
@@ -84,7 +84,7 @@ class DeveloperProfile(db.Model, SerializerMixin):
 class ClientProfile(db.Model, SerializerMixin):
     __tablename__ = 'client_profiles'
 
-    serialize_rules = ("-user.client_profile", "-jobs.client", "-comments.clent",)
+    serialize_rules = ("-user.client_profile", "-jobs.client", )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
@@ -120,7 +120,7 @@ class Job(db.Model, SerializerMixin):
 class Comment(db.Model, SerializerMixin):
     __tablename__ = 'comments'
 
-    serialize_rules = ("-user.comments","-job.comments", "-parent", "-replies.parent",)
+    serialize_rules = ("-replies", "-parent", "-user", "-job.comments",)
 
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
@@ -128,6 +128,7 @@ class Comment(db.Model, SerializerMixin):
     parent_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=True)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
     
 
     def add_reply(self, content):
@@ -144,6 +145,20 @@ class Comment(db.Model, SerializerMixin):
     replies = db.relationship("Comment", backref=db.backref("parent", remote_side=[id]),
                               lazy="dynamic")
     
+    def to_dict(self, depth=1):
+        print(f"Serializing comment {self.id}, depth: {depth}")
+        if depth == 0:
+            return {"id": self.id, "content": self.content}
+        
+        return {
+            "id": self.id,
+            "content": self.content,
+            "user": {"id": self.user.id, "firstname": self.user.first_name, "role":self.user.role} if self.user else None,
+            "job_id": self.job_id,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "replies": [reply.to_dict(depth=depth - 1) for reply in self.replies]
+        }
 
   
 

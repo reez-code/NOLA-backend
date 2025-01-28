@@ -7,8 +7,6 @@ from config import db
 
 class DeveloperDetails(Resource):
     parser = reqparse.RequestParser()
-    parser.add_argument("first_name", required=True, help="First name is required")
-    parser.add_argument("last_name", required=True, help="Last name is required")
     parser.add_argument("description", required=True, help="Description is required")
     parser.add_argument("skills", required=True, help="Skills is required")
     parser.add_argument("available_time", required=True, help="Available time is required")
@@ -24,8 +22,6 @@ class DeveloperDetails(Resource):
             try:
                 user_id = get_jwt_identity()
                 developer = DeveloperProfile(
-                    first_name=data["first_name"],
-                    last_name=data["last_name"],
                     description=data["description"],
                     skills=data["skills"],
                     available_time=data["available_time"],

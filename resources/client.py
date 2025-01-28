@@ -12,7 +12,6 @@ class ClientDetails(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument("business_name", required=True, help="Business name is required")
     parser.add_argument("business_description", required=True, help="Business Description is required")
-    parser.add_argument("logo", required=True, help="Logo is required")
 
     @jwt_required()
     def post(self):
@@ -26,7 +25,6 @@ class ClientDetails(Resource):
                 client_details = ClientProfile(
                     business_name=data["business_name"],
                     business_description=data["business_description"],
-                    logo=data["logo"],
                     user_id=int(user_id)
                 )
                 db.session.add(client_details)
