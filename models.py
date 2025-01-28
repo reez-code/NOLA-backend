@@ -143,7 +143,7 @@ class Comment(db.Model, SerializerMixin):
         return {
             "id": self.id,
             "content": self.content,
-            "user": {"id": self.user.id, "firstname": self.user.first_name, "role":self.user.role} if self.user else None,
+            "user": {"id": self.user.id, "firstname": self.user.first_name, "lastname":self.user.last_name, "role":self.user.role} if self.user else None,
             "job_id": self.job_id,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
