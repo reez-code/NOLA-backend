@@ -1,35 +1,20 @@
+from flask import make_response
 from flask_restful import Resource, reqparse
-from flask_bcrypt import generate_password_hash
 from flask_jwt_extended import create_access_token, jwt_required
 
-from models import User, DeveloperProfile, ClientProfile
+from models import User
+from config import db
 
-class SignupResource(Resource):
+class Signup(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('email', required=True, help='Email is required')
-    parser.add_argument('username', required=True, help='First name is required')
+    parser.add_argument('firstname', required=True, help='First name is required')
+    parser.add_argument("lastname", required=True, help="Last name is required")
     parser.add_argument('password', required=True, help='Password is required')
-    parser.add_argument('role', required=True, help='Role is required (must be either developer, client or admin)')
-
-    # additional arguments: Client
-    parser.add_argument('business_name', help='business_name is required for clients')
-    parser.add_argument('business_description', help='business_description is required for clients')
-    parser.add_argument('logo', help='logo is required for clients')
-    
-    # additional arguments: Developer
-    parser.add_argument("full_name", help="fullname is required for developers")
-    parser.add_argument("description", help="description is required for developers") 
-    parser.add_argument("github_account", help="github is required for developers")
-    parser.add_argument("profile_picture", help="profile_picture is required for developers")
-    parser.add_argument("skills", help="skills is required for developers")
-    parser.add_argument("education_level", help="education_level is required for developers")
-    parser.add_argument("available_time", help="available_time is required for developers")
+    parser.add_argument('role', required=True, help='Role is required (must be either developer or client)')
     
     def post(self):
         data = self.parser.parse_args()
-
-        # hash the password
-        data["password"] = generate_password_hash(data["password"]).decode("utf-8")
 
         # validate the role
         role = data["role"].lower()
@@ -42,4 +27,63 @@ class SignupResource(Resource):
             return {'message': 'Email already exists', 'status': 'fail'}, 422
         
         # Create a new user instance
+        try:
+            user = User(
+                email=data["email"],
+                first_name=data["firstname"],
+                last_name=data["lastname"],
+                role=role
+            )
+            user.password_hash = data["password"]
+            db.session.add(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            response = {"errors": [str(e)]}
+            return make_response(response, 422)
         
+        user_dict = user.to_dict()
+        additional_claims = {"role": user_dict["role"].lower()}
+        access_token = create_access_token(identity=str(user.id),
+                                           additional_claims=additional_claims)
+        
+        return {
+            "message": "Registered Successfully",
+            "status": "success",
+            "user": {**user_dict, "role":user.role},
+            "access_token": access_token
+        }, 201
+
+class Login(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument("email", required=True, help="Email is required")
+    parser.add_argument("password", required=True, help="Password is required")
+
+    def post(self):
+        data = self.parser.parse_args()
+
+        user = User.query.filter_by(email=data["email"]).first()
+
+        if user:
+            if user.authenticate(data["password"]):
+                user_dict = user.to_dict()
+                additional_claims = {"role": user_dict["role"].lower()}
+                access_token = create_access_token(identity=str(user.id),
+                                           additional_claims=additional_claims)
+                return {
+                    "message": "Logged in Successfully",
+                    "status": "success",
+                    "user": {**user_dict, "role":user.role},
+                    "access_token": access_token
+                },201
+            else:
+                return make_response({"error": "Invalid username/password", "status":"fail"}, 401)
+        else:
+            return make_response({"error": "Invalid username/password", "status":"fail"}, 401)
+    
+class Logout(Resource):
+    @jwt_required()
+    def post(self):
+        #jwt handles log out by removing the token from client side
+        return {"message": "Logged out successfully"}, 200
+                

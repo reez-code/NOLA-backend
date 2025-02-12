@@ -1,52 +1,37 @@
 import os
 from datetime import timedelta
+from flask import Flask
+from flask_bcrypt import Bcrypt
+from flask_migrate import Migrate
+from flask_restful import Api
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData
+from flask_jwt_extended import JWTManager
+from flask_cors import CORS
 
-class Config:
-    # General Configurations
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'your_secret_key')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your_jwt_secret_key')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
+app.json.compact = False
 
-    # File Uploads and Logging
-    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', './uploads')
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-    
-    # Default Admin Email
-    DEFAULT_ADMIN_EMAIL = os.environ.get('DEFAULT_ADMIN_EMAIL', 'admin@example.com')
-
-    # Email Configuration
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', True)
-    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', False)
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-
-    # Pagination
-    ITEMS_PER_PAGE = int(os.environ.get('ITEMS_PER_PAGE', 10))
-
-
-class DevelopmentConfig(Config):
-    DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URI', 'sqlite:///dev.db')
-
-
-class TestingConfig(Config):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URI', 'sqlite:///test.db')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)
-    ITEMS_PER_PAGE = 5  # Reduced for faster testing
-
-
-class ProductionConfig(Config):
-    DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('PROD_DATABASE_URI', 'sqlite:///prod.db')  # Change to production database
-
-
-# Dictionary to easily switch configurations
-config_by_name = {
-    'development': DevelopmentConfig,
-    'testing': TestingConfig,
-    'production': ProductionConfig
+convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
 }
+metadata = MetaData(naming_convention=convention)
+db = SQLAlchemy(metadata=metadata)
+
+migrate = Migrate(app, db)
+db.init_app(app)
+
+# initializing extensions
+CORS(app)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
+api = Api(app)
