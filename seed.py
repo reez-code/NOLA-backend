@@ -4,7 +4,7 @@ from models import User, ClientProfile, Comment
 with app.app_context():
     print("Deleting Records")
     
-    comments = Comment.query.all()
+    comments = User.query.all()
     for comment in comments:
         db.session.delete(comment)
     db.session.commit()
