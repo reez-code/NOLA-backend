@@ -7,50 +7,71 @@ from config import db
 
 class DeveloperDetails(Resource):
     parser = reqparse.RequestParser()
-    parser.add_argument("description", required=True, help="Description is required")
-    parser.add_argument("skills", required=True, help="Skills is required")
-    parser.add_argument("available_time", required=True, help="Available time is required")
-    parser.add_argument('github_account', required=True, help="Link to Github Account is required")
-    parser.add_argument("education_level", required=True, help="Education Level is required")
-    parser.add_argument("profile_picture", required=True, help="Profile Picture is required")
+    parser.add_argument("profession", help="Profession")
+    parser.add_argument("description", help="Description")
+    parser.add_argument("skills", help="Skills")
+    parser.add_argument("available_time", help="Available time")
+    parser.add_argument('github_account', help="Link to Github Account")
+    parser.add_argument("education_level", help="Education Level")
+    parser.add_argument("profile_picture", help="Profile Picture")
+    parser.add_argument('linkedin_account', help="LinkedIn account link")
+    parser.add_argument("years_of_experience", type=int, help="Years of experience")
 
     @jwt_required()
     def post(self):
+        """Update developer profile details"""
         jwt = get_jwt()
-        if jwt["role"] in ["developer"]:
-            data = self.parser.parse_args()
-            try:
-                user_id = get_jwt_identity()
-                developer = DeveloperProfile(
-                    description=data["description"],
-                    skills=data["skills"],
-                    available_time=data["available_time"],
-                    github_account=data["github_account"],
-                    education_level=data["education_level"],
-                    profile_picture=data["profile_picture"],
-                    user_id=user_id
-                )
-                db.session.add(developer)
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                response =  {"errors": [str(e)], "status":"fail", "message":"Something went wrong"}
-                return make_response(response, 422)
-            
-            response = {"message": "Details added successfully",
-                        "status": "success",
-                        "developer_details": developer.to_dict()}
-            return make_response(response, 201)
-        else:
-            response = {"message": "Something went wrong", "status": "fail"}
+        if jwt["role"] not in ["developer"]:
+            response = {"message": "Unauthorized", "status": "fail"}
             return make_response(response, 401)
+        
+        data = self.parser.parse_args()
+        try:
+            user_id = get_jwt_identity()
+            developer = DeveloperProfile.query.filter_by(user_id=user_id).first()
+            
+            if not developer:
+                response = {"message": "Developer profile not found", "status": "fail"}
+                return make_response(response, 404)
+            
+            # Update fields that are provided
+            if data.get("profession"):
+                developer.profession = data["profession"]
+            if data.get("description"):
+                developer.description = data["description"]
+            if data.get("skills"):
+                developer.skills = data["skills"]
+            if data.get("available_time"):
+                developer.available_time = data["available_time"]
+            if data.get("github_account"):
+                developer.github_account = data["github_account"]
+            if data.get("linkedin_account"):
+                developer.linkedin_account = data["linkedin_account"]
+            if data.get("education_level"):
+                developer.education_level = data["education_level"]
+            if data.get("profile_picture"):
+                developer.profile_picture = data["profile_picture"]
+            if data.get("years_of_experience"):
+                developer.years_of_experience = data["years_of_experience"]
+            
+            db.session.add(developer)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            response =  {"errors": [str(e)], "status":"fail", "message":"Something went wrong"}
+            return make_response(response, 422)
+        
+        response = {"message": "Details updated successfully",
+                    "status": "success",
+                    "developer_details": developer.to_dict()}
+        return make_response(response, 200)
         
     @jwt_required()
     def get(self, id=None):
         jwt = get_jwt()
 
-        if jwt["role"] not in ["developer", "admin"]:
-            response = {"message": "Something went wrong", "status": "fail"}
+        if jwt["role"] not in ["developer", "admin", "client"]:
+            response = {"message": "Unauthorized", "status": "fail"}
             return make_response(response, 401)
         
         if jwt["role"] in ["developer"]:
@@ -61,67 +82,68 @@ class DeveloperDetails(Resource):
         if user_id:
             user = User.query.filter_by(id=user_id).first()
             if not user:
-                response = {"message": "Something went wrong", "status": "fail"}
+                response = {"message": "User not found", "status": "fail"}
                 return make_response(response, 404)
             response = user.to_dict()
             return make_response(response, 200)
         else:
             if jwt["role"] not in ["admin"]:
-                response = {"message": "Something went wrong", "status": "fail"}
+                response = {"message": "Unauthorized", "status": "fail"}
                 return make_response(response, 401)
             developers = DeveloperProfile.query.all()
             if not developers:
                 response = {"message": "Developers not found", "status": "fail"}
                 return make_response(response, 404)
             response =  [developer.to_dict() for developer in developers]
-            return {response, 200}
+            return make_response(response, 200)
 
     
     @jwt_required()
     def patch(self):
         jwt = get_jwt()
 
-        if jwt["role"] in ["developer"]:
-            data = request.get_json()
-            
-            if not data:
-                return make_response({"message": "No input data provided", "status": "fail"}, 400)
-            
-            try:
-                user_id = get_jwt_identity()
-                developer = DeveloperProfile.query.filter_by(user_id=user_id).first()
-                
-                if not developer:
-                    return make_response({"message": "Developer not found", "status": "fail"}, 404)
-                
-                for attr in data:
-                    setattr(developer, attr, data[attr])
-                db.session.add(developer)
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                response =  {"errors": [str(e)]}
-                return make_response(response, 422)
-            
+        if jwt["role"] not in ["developer"]:
             response = {
-                "message": "Updated Successfully",
-                "developer": developer.to_dict(),
-                "status": "success"
-            }
-            return make_response(response, 200)
-        else:
-            response = {
-                "message": "Something went wrong",
+                "message": "Unauthorized",
                 "status": "fail"
             }
             return make_response(response, 401)
+        
+        data = request.get_json()
+        
+        if not data:
+            return make_response({"message": "No input data provided", "status": "fail"}, 400)
+        
+        try:
+            user_id = get_jwt_identity()
+            developer = DeveloperProfile.query.filter_by(user_id=user_id).first()
+            
+            if not developer:
+                return make_response({"message": "Developer profile not found", "status": "fail"}, 404)
+            
+            for attr in data:
+                if hasattr(developer, attr):
+                    setattr(developer, attr, data[attr])
+            db.session.add(developer)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            response =  {"errors": [str(e)]}
+            return make_response(response, 422)
+        
+        response = {
+            "message": "Profile updated successfully",
+            "developer": developer.to_dict(),
+            "status": "success"
+        }
+        return make_response(response, 200)
         
     @jwt_required()
     def delete(self, id=None):
         jwt = get_jwt()
 
         if jwt["role"] not in ["admin", "developer"]:
-            return {"message": "Something went wrong"}, 401
+            return {"message": "Unauthorized", "status": "fail"}, 401
         
         if jwt["role"] in ["developer"]:
             user_id = get_jwt_identity()
@@ -142,7 +164,5 @@ class DeveloperDetails(Resource):
             response =  {"errors": [str(e)]}
             return make_response(response, 422)
         
-        response = {"message": "developer successfully deleted", "status": "success"}
+        response = {"message": "Developer successfully deleted", "status": "success"}
         return make_response(response, 200)
-
-

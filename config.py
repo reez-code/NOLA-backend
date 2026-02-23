@@ -12,8 +12,10 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+# Use environment secrets in production; fall back to a development secret if missing
+# (Do NOT use the fallback in production environments.)
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY") or "dev-jwt-secret-key"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or "dev-secret-key"
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 app.json.compact = False
 

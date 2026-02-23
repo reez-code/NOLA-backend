@@ -7,6 +7,14 @@ from config import db, bcrypt
 
 
 
+# association table between clients and developers (visibility / applicants)
+client_developer_association = db.Table(
+    'client_developers',
+    db.Column('client_profile_id', db.Integer, db.ForeignKey('client_profiles.id'), primary_key=True),
+    db.Column('developer_profile_id', db.Integer, db.ForeignKey('developer_profiles.id'), primary_key=True)
+)
+
+
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
@@ -54,8 +62,9 @@ class User(db.Model, SerializerMixin):
             raise ValueError("Role must be either client or developer")
         return role
     
+    
     def __repr__(self):
-        return f"<User:{self.username}/>"
+        return f"<User:{self.email}/>"
 
  
 
@@ -64,37 +73,49 @@ class User(db.Model, SerializerMixin):
 class DeveloperProfile(db.Model, SerializerMixin):
     __tablename__ = 'developer_profiles'
 
-    serialize_rules = ("-user.developer_profile", "-comments.developer", "-job_applications.assigned_developer",)
+    # exclude back-references and the clients relationship to avoid circular serialization
+    serialize_rules = ("-user.developer_profile", "-comments.developer", "-job_applications.assigned_developer", "-clients",)
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    profile_picture = db.Column(db.String(200), nullable=True)
-    skills = db.Column(db.String(200), nullable=False)
-    available_time = db.Column(db.String(50), nullable=True)
+    profession = db.Column(db.String(150), nullable=False)  # Required field
+    profile_picture = db.Column(db.String(200), nullable=False)
     github_account = db.Column(db.String(100), nullable=True)
+    linkedin_account = db.Column(db.String(100), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    skills = db.Column(db.String(200), nullable=True)
+    available_time = db.Column(db.String(50), nullable=True)
     education_level = db.Column(db.String(100), nullable=True)
+    years_of_experience = db.Column(db.Integer, nullable=True, default=0)
+    proficiency_points = db.Column(db.Integer, default=0)
+    courtesy_points = db.Column(db.Integer, default=0)
+    last_proficiency_award_date = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
     user = db.relationship("User", back_populates="developer_profile")
     job_applications = db.relationship("Job", back_populates="assigned_developer")
+    clients = db.relationship("ClientProfile", secondary=client_developer_association, back_populates="developers")
 
 
 class ClientProfile(db.Model, SerializerMixin):
     __tablename__ = 'client_profiles'
 
-    serialize_rules = ("-user.client_profile", "-jobs.client", )
+    # exclude back-references and the developers relationship to avoid circular serialization
+    serialize_rules = ("-user.client_profile", "-jobs.client", "-developers", )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    business_name = db.Column(db.String(150), nullable=True)
-    business_description = db.Column(db.Text, nullable=True)
+    business_name = db.Column(db.String(150), nullable=False)
+    business_category = db.Column(db.String(150), nullable=False)  # Required field
+    business_description = db.Column(db.Text, nullable=False)
+    business_logo = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
     user = db.relationship("User", back_populates="client_profile")
     jobs = db.relationship("Job", back_populates="client", cascade="all, delete-orphan")
+    developers = db.relationship("DeveloperProfile", secondary=client_developer_association, back_populates="clients")
     
 
 
@@ -106,8 +127,26 @@ class Job(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client_profiles.id'), nullable=False)
     developer_id = db.Column(db.Integer, db.ForeignKey('developer_profiles.id'), nullable=True)  # Assigned developer
+    
+    # Basic job info
     title = db.Column(db.String(150), nullable=False)
+    position = db.Column(db.String(150), nullable=True)  # Job position title
     description = db.Column(db.Text, nullable=True)
+    
+    # Contract info
+    contract_type = db.Column(db.String(50), nullable=True)  # 'full-time', 'part-time', 'contract', 'freelance'
+    hours_per_week = db.Column(db.Integer, nullable=True)  # Commitment in hours
+    
+    # Location info
+    location_type = db.Column(db.String(20), nullable=True)  # 'remote' or 'physical'
+    location_details = db.Column(db.Text, nullable=True)  # For remote: tech requirements; for physical: exact address
+    
+    # Job details as JSON arrays
+    roles_and_responsibilities = db.Column(db.JSON, nullable=True, default=[])  # List of responsibilities
+    requirements = db.Column(db.JSON, nullable=True, default=[])  # List of requirements
+    desired_skills = db.Column(db.JSON, nullable=True, default=[])  # List of desired skills
+    experience_required = db.Column(db.Text, nullable=True)  # Description of experience needed
+    
     posted_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
     status = db.Column(db.String(20), default='open')  # 'open', 'in-progress', 'completed'

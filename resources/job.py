@@ -1,24 +1,33 @@
 from flask import make_response, request
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 
 
-from models import Job, ClientProfile, DeveloperProfile
+from models import Job, ClientProfile, DeveloperProfile, client_developer_association
 from config import db
 
 class JobResource(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument("title", required=True, help="Title is required")
-    parser.add_argument("description", required=True, help="Description is required")
-    parser.add_argument("status", required=True, help="Status is required")
+    parser.add_argument("position", required=False, help="Position of the job")
+    parser.add_argument("description", required=False, help="Job description")
+    parser.add_argument("contract_type", required=False, help="Type of contract")
+    parser.add_argument("hours_per_week", type=int, required=False, help="Hours per week")
+    parser.add_argument("location_type", required=False, help="Location type (remote/physical)")
+    parser.add_argument("location_details", required=False, help="Location details")
+    parser.add_argument("roles_and_responsibilities", type=list, required=False, location='json', help="Roles and responsibilities")
+    parser.add_argument("requirements", type=list, required=False, location='json', help="Requirements")
+    parser.add_argument("desired_skills", type=list, required=False, location='json', help="Desired skills")
+    parser.add_argument("experience_required", required=False, help="Experience required")
+    parser.add_argument("status", required=False, help="Job status")
 
     @jwt_required()
     def post(self):
         data = self.parser.parse_args()
         jwt = get_jwt()
-        status = data["status"].lower()
+        status = (data.get("status") or "open").lower()
 
         if jwt["role"] in ["client"]:
             try:
@@ -31,7 +40,16 @@ class JobResource(Resource):
 
                 job = Job(
                     title=data["title"],
-                    description=data["description"],
+                    position=data.get("position"),
+                    description=data.get("description"),
+                    contract_type=data.get("contract_type"),
+                    hours_per_week=data.get("hours_per_week"),
+                    location_type=data.get("location_type"),
+                    location_details=data.get("location_details"),
+                    roles_and_responsibilities=data.get("roles_and_responsibilities", []),
+                    requirements=data.get("requirements", []),
+                    desired_skills=data.get("desired_skills", []),
+                    experience_required=data.get("experience_required"),
                     status=status,
                     client_id=client_id
                 )
@@ -50,7 +68,11 @@ class JobResource(Resource):
         jwt = get_jwt()
 
         if jwt["role"] in ["client", "developer"]:
-            user_id = get_jwt_identity()
+            # ensure identity is integer for DB queries
+            try:
+                user_id = int(get_jwt_identity())
+            except Exception:
+                user_id = get_jwt_identity()
         else:
             user_id = None
         
@@ -62,18 +84,42 @@ class JobResource(Resource):
                     return {"message": "Client profile not found"}, 404
                 client_id  = client_profile.id
                 jobs = Job.query.filter_by(client_id=client_id).all()
+                job_list = [j.to_dict() for j in jobs] if jobs else []
+                return make_response(job_list, 200)
+                
             elif jwt["role"] in ["developer"]:
                 developer_profile = DeveloperProfile.query.filter_by(user_id=user_id).first()
                 if not developer_profile:
                     return {"message": "Developer profile not found"}, 404
                 developer_id = developer_profile.id
-                jobs = Job.query.filter_by(developer_id=developer_id).all()
-            
-            if jobs:
-                    job = [job.to_dict() for job in jobs]
-                    return make_response(job, 200)
-            else:
-                    return {"message": "No jobs found"}, 404
+
+                # Determine client_profile ids that have this developer associated
+                client_id_rows = db.session.query(ClientProfile.id).join(
+                    client_developer_association,
+                    ClientProfile.id == client_developer_association.c.client_profile_id
+                ).filter(
+                    client_developer_association.c.developer_profile_id == developer_id
+                ).all()
+
+                client_ids = [r[0] for r in client_id_rows] if client_id_rows else []
+
+                if client_ids:
+                    jobs = Job.query.filter(
+                        or_(Job.developer_id == developer_id, Job.client_id.in_(client_ids))
+                    ).all()
+                else:
+                    jobs = Job.query.filter_by(developer_id=developer_id).all()
+
+                # prepare job dicts
+                job_list = [j.to_dict() for j in jobs] if jobs else []
+
+                # load associated client profiles so developer can see business listings even if no jobs
+                clients = []
+                if client_ids:
+                    client_objs = ClientProfile.query.filter(ClientProfile.id.in_(client_ids)).all()
+                    clients = [c.to_dict() for c in client_objs] if client_objs else []
+
+                return make_response({"jobs": job_list, "clients": clients}, 200)
         
         elif id:
             if jwt["role"] not in ["admin"]:
@@ -109,7 +155,7 @@ class JobResource(Resource):
         if not id:
             return {"message": "Job id is required"}, 400
         
-        if data["developer_id"]:
+        if data.get("developer_id"):
             developer_id = data["developer_id"]
             developer_profile = DeveloperProfile.query.filter_by(id=developer_id).first()
             if not developer_profile:
@@ -132,17 +178,20 @@ class JobResource(Resource):
             return {"message": "Job not found"}, 404
         
         try:
-            for attr in data:
-                setattr(job, attr, data[attr])
-            db.session.add(job)
+            # Update each attribute if it exists on the model
+            for attr, value in data.items():
+                if hasattr(job, attr):
+                    setattr(job, attr, value)
+            
             db.session.commit()
+            response = {"message": "Job updated successfully", "job": job.to_dict()}
+            return make_response(response, 200)
+            
         except Exception as e:
             db.session.rollback()
-            response = {"errors": [str(e)]}
+            print(f"Error updating job: {str(e)}")
+            response = {"errors": [str(e)], "message": "Failed to update job"}
             return make_response(response, 422)
-        
-        response = {"message": "Job updated successfully", "Job":job.to_dict()}
-        return make_response(response, 200)
     
     @jwt_required()
     def delete(self, id=None):
