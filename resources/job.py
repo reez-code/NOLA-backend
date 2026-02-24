@@ -5,7 +5,7 @@ from sqlalchemy import and_, or_
 
 
 
-from models import Job, ClientProfile, DeveloperProfile, client_developer_association
+from models import Job, ClientProfile, DeveloperProfile
 from config import db
 
 class JobResource(Resource):
@@ -93,33 +93,13 @@ class JobResource(Resource):
                     return {"message": "Developer profile not found"}, 404
                 developer_id = developer_profile.id
 
-                # Determine client_profile ids that have this developer associated
-                client_id_rows = db.session.query(ClientProfile.id).join(
-                    client_developer_association,
-                    ClientProfile.id == client_developer_association.c.client_profile_id
-                ).filter(
-                    client_developer_association.c.developer_profile_id == developer_id
-                ).all()
-
-                client_ids = [r[0] for r in client_id_rows] if client_id_rows else []
-
-                if client_ids:
-                    jobs = Job.query.filter(
-                        or_(Job.developer_id == developer_id, Job.client_id.in_(client_ids))
-                    ).all()
-                else:
-                    jobs = Job.query.filter_by(developer_id=developer_id).all()
+                # Developers now only see jobs they are directly assigned to
+                jobs = Job.query.filter_by(developer_id=developer_id).all()
 
                 # prepare job dicts
                 job_list = [j.to_dict() for j in jobs] if jobs else []
 
-                # load associated client profiles so developer can see business listings even if no jobs
-                clients = []
-                if client_ids:
-                    client_objs = ClientProfile.query.filter(ClientProfile.id.in_(client_ids)).all()
-                    clients = [c.to_dict() for c in client_objs] if client_objs else []
-
-                return make_response({"jobs": job_list, "clients": clients}, 200)
+                return make_response({"jobs": job_list}, 200)
         
         elif id:
             if jwt["role"] not in ["admin"]:

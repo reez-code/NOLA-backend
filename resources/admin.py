@@ -94,58 +94,7 @@ class AdminAssignDeveloper(Resource):
             return {"error": str(e), "status": "fail"}, 500
 
 
-class AdminAddJobToClient(Resource):
-    """Admin resource to add available jobs to client's page"""
-    
-    parser = reqparse.RequestParser()
-    parser.add_argument('developer_id', required=True, type=int, help='Developer ID is required')
-    parser.add_argument('client_id', required=True, type=int, help='Client ID is required')
-    
-    @jwt_required()
-    def post(self):
-        """Add a developer reference to a client (for portfolio/visibility)"""
-        jwt = get_jwt()
-        
-        if jwt["role"] != "admin":
-            return {"error": "Unauthorized", "status": "fail"}, 401
-        
-        data = self.parser.parse_args()
-        
-        try:
-            developer = User.query.filter_by(id=data['developer_id'], role="developer").first()
-            if not developer:
-                return {"error": "Developer not found", "status": "fail"}, 404
-            
-            client = User.query.filter_by(id=data['client_id'], role="client").first()
-            if not client:
-                return {"error": "Client not found", "status": "fail"}, 404
-            
-            client_profile = ClientProfile.query.filter_by(user_id=client.id).first()
-            if not client_profile:
-                return {"error": "Client profile not found", "status": "fail"}, 404
-            
-            # find developer profile
-            developer_profile = DeveloperProfile.query.filter_by(user_id=developer.id).first()
-            if not developer_profile:
-                return {"error": "Developer profile not found", "status": "fail"}, 404
 
-            # add association if not already present
-            if developer_profile not in client_profile.developers:
-                client_profile.developers.append(developer_profile)
-                db.session.add(client_profile)
-                db.session.commit()
-            else:
-                # already associated
-                pass
-            return {
-                "message": "Developer is now visible to client",
-                "developer": developer.to_dict(),
-                "client": client.to_dict(),
-                "status": "success"
-            }, 200
-        except Exception as e:
-            db.session.rollback()
-            return {"error": str(e), "status": "fail"}, 500
 
 
 class AdminDeveloperPoints(Resource):

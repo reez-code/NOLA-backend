@@ -189,6 +189,85 @@ class Comment(db.Model, SerializerMixin):
             "replies": [reply.to_dict() for reply in self.replies]
         }
 
-  
 
- 
+class Profession(db.Model, SerializerMixin):
+    __tablename__ = 'professions'
+
+    serialize_rules = ("-exam_links.profession", "-hackathons.profession", "-code_quizzes.profession",)
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+
+    exam_links = db.relationship("ExamLink", back_populates="profession", cascade="all, delete-orphan")
+    hackathons = db.relationship("Hackathon", back_populates="profession", cascade="all, delete-orphan")
+    code_quizzes = db.relationship("CodeQuiz", back_populates="profession", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Profession:{self.name}>"
+
+
+class ExamLink(db.Model, SerializerMixin):
+    __tablename__ = 'exam_links'
+
+    serialize_rules = ("-profession",)
+
+    id = db.Column(db.Integer, primary_key=True)
+    profession_id = db.Column(db.Integer, db.ForeignKey('professions.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    url = db.Column(db.String(500), nullable=False)
+    difficulty_level = db.Column(db.String(50), nullable=True)  # 'beginner', 'intermediate', 'advanced'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+
+    profession = db.relationship("Profession", back_populates="exam_links")
+
+    def __repr__(self):
+        return f"<ExamLink:{self.title}>"
+
+
+class Hackathon(db.Model, SerializerMixin):
+    __tablename__ = 'hackathons'
+
+    serialize_rules = ("-profession",)
+
+    id = db.Column(db.Integer, primary_key=True)
+    profession_id = db.Column(db.Integer, db.ForeignKey('professions.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=True)
+    registration_link = db.Column(db.String(500), nullable=True)
+    location = db.Column(db.String(200), nullable=True)  # 'online' or physical location
+    prize_pool = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+
+    profession = db.relationship("Profession", back_populates="hackathons")
+
+    def __repr__(self):
+        return f"<Hackathon:{self.title}>"
+
+
+class CodeQuiz(db.Model, SerializerMixin):
+    __tablename__ = 'code_quizzes'
+
+    serialize_rules = ("-profession",)
+
+    id = db.Column(db.Integer, primary_key=True)
+    profession_id = db.Column(db.Integer, db.ForeignKey('professions.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    difficulty_level = db.Column(db.String(50), nullable=True)  # 'beginner', 'intermediate', 'advanced'
+    quiz_url = db.Column(db.String(500), nullable=False)
+    estimated_time = db.Column(db.Integer, nullable=True)  # in minutes
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+
+    profession = db.relationship("Profession", back_populates="code_quizzes")
+
+    def __repr__(self):
+        return f"<CodeQuiz:{self.title}>"

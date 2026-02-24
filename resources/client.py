@@ -4,7 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from flask_jwt_extended.exceptions import JWTExtendedException
 
 
-from models import ClientProfile, User, DeveloperProfile
+from models import ClientProfile, User, DeveloperProfile, Job
 from config import db
 
 
@@ -146,7 +146,7 @@ class ClientDetails(Resource):
 
 
 class ClientApplicants(Resource):
-    """Return developers visible to a specific client (applicants)"""
+    """Return developers linked to jobs posted by a specific client, grouped by job"""
 
     @jwt_required()
     def get(self, client_id):
@@ -167,9 +167,35 @@ class ClientApplicants(Resource):
         if not client_profile:
             return {"error": "Client profile not found", "status": "fail"}, 404
 
-        developers = client_profile.developers or []
-        result = [dev.user.to_dict() for dev in developers]
-        return {"developers": result, "status": "success"}, 200
+        # Get all jobs for this client
+        jobs = Job.query.filter_by(client_id=client_profile.id).all()
+        
+        # Build applicants grouped by job
+        applicants_by_job = []
+        # also gather developers linked to this client (visibility)
+        client_developers = client_profile.developers or []
+        developers_list = []
+        for dev_profile in client_developers:
+            try:
+                dev_user = User.query.filter_by(id=dev_profile.user_id).first()
+                if dev_user:
+                    developers_list.append(dev_user.to_dict())
+            except Exception:
+                continue
+        for job in jobs:
+            job_data = job.to_dict()
+            # Add developer info if one is assigned to this job
+            if job.developer_id:
+                developer_profile = DeveloperProfile.query.filter_by(id=job.developer_id).first()
+                if developer_profile:
+                    developer_user = User.query.filter_by(id=developer_profile.user_id).first()
+                    job_data['assigned_developer'] = developer_user.to_dict() if developer_user else None
+            # include client-visible developers as potential applicants
+            job_data['developers'] = developers_list
+            
+            applicants_by_job.append(job_data)
+        
+        return {"applicants_by_job": applicants_by_job, "status": "success"}, 200
 
 
 
